@@ -11,30 +11,29 @@ library(RSQLite)
 
 temp<-dbConnect(SQLite(),dbname="Shire.db")
 
-store<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, POP_DESC
+store<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name,BOB, POP_DESC
            FROM New_Patient
            group by product_name, POP_DESC
            order by POP_DESC,num')
 store$percentage<-NA
-
-
 
 for (i in seq(1,26,2)) {
   store$percentage[i]<-store$num[i] /(store$num[i+1]+store$num[i])
   store$percentage[i+1]<-store$num[i+1] /(store$num[i+1]+store$num[i])
 }
 for (i in seq(1,26,2)) {
-restore<-data.frame('POP_DESC_NAME'=c(store$POP_DESC[seq(1,26,2)]),'XIIdra'=c(store$num[seq(1,26,2)]),
-                    'Restasis'=c(store$num[seq(2,26,2)]),'total'=c(store$num[seq(1,26,2)]+store$num[seq(2,26,2)]),
-                    'Percentage_XIIdra'=c(store$percentage[seq(1,26,2)]*100),'Percentage_Restasis'=c(store$percentage[seq(2,26,2)]*100))
+restore<-data.frame('POP_DESC_NAME'=c(store$POP_DESC[seq(1,26,2)]),'Restasis'=c(store$num[seq(1,26,2)]),
+                    'Xiidra'=c(store$num[seq(2,26,2)]),'total'=c(store$num[seq(1,26,2)]+store$num[seq(2,26,2)]),
+                    'Percentage_Restasis'=c(store$percentage[seq(1,26,2)]*100),'Percentage_Xiidra'=c(store$percentage[seq(2,26,2)]*100))
 }
 
+restore
 
 ```
 
 ```{r}
 new <- filter(restore, restore$total < 500)
-View(new)
+
 nrow(new)
 
 desc <- "others"
@@ -45,14 +44,15 @@ percen_xi=0
 percen_re=0
 
 for (i in 1:nrow(new)){
-  xiidra_sum=xiidra_sum+new$XIIdra[i]
   restasis_sum=restasis_sum+new$Restasis[i]
+  xiidra_sum=xiidra_sum+new$Xiidra[i]
   total_sum=xiidra_sum + restasis_sum
   percen_xi=(xiidra_sum/total_sum)*100
   percen_re=(restasis_sum/total_sum)*100
 } 
-add_row(restore, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+RESTORE <- add_row(restore, POP_DESC_NAME = desc, Restasis = restasis_sum, Xiidra = xiidra_sum,  total=total_sum, Percentage_Restasis=percen_re ,Percentage_Xiidra=percen_xi)
 RESTORE <- filter(restore, restore$total > 300)
+RESTORE
 ```
 
 ```{r}
@@ -65,13 +65,13 @@ percen_xi=0
 percen_re=0
 
 for (i in 1:nrow(RESTORE)){
-  xiidra_sum=xiidra_sum+RESTORE$XIIdra[i]
+  xiidra_sum=xiidra_sum+RESTORE$Xiidra[i]
   restasis_sum=restasis_sum+RESTORE$Restasis[i]
   total_sum=xiidra_sum + restasis_sum
   percen_xi=(xiidra_sum/total_sum)*100
   percen_re=(restasis_sum/total_sum)*100
 } 
-RESTORE1 <- add_row(RESTORE, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+RESTORE1 <- add_row(RESTORE, POP_DESC_NAME = desc, Xiidra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_Xiidra=percen_xi, Percentage_Restasis=percen_re)
 RESTORE2 <- arrange(RESTORE1, total)
 RESTORE2
 kable(RESTORE2)
@@ -112,8 +112,18 @@ ggplot(rest, aes(x=yearmonth,y=num)) + geom_bar(stat = "identity") + ggtitle("Re
 ```
 
 
+```{r}
+data<-dbGetQuery(temp,'SELECT patient_id, product_name,  dispensed_date, BOB 
+                        FROM New_Patient')
 
-
-
+a<-filter (data,product_name=="XIIDRA") 
+b<-count(a,BOB)
+aa<-arrange(b, desc(n))
+aa
+c<-filter (data,product_name=="RESTASIS")
+d<-count(c, BOB)
+cc<-arrange(d, desc(n))
+cc
+```
 
 
