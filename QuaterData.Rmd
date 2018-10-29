@@ -1,0 +1,208 @@
+---
+title: "QuaterData"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#total
+library(DBI)
+library(RSQLite)
+library(tidyverse)
+temp<-dbConnect(SQLite(),dbname="Shire.db")
+
+store<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, POP_DESC
+           FROM New_Patient
+           group by product_name, POP_DESC
+           order by  POP_DESC,product_name')
+store$percentage<-NA
+
+for (i in seq(1,nrow(store),2)) {
+  store$percentage[i]<-store$num[i] /(store$num[i+1]+store$num[i])
+  store$percentage[i+1]<-store$num[i+1] /(store$num[i+1]+store$num[i])
+}
+for (i in seq(1,nrow(store),2)) {
+restore<-data.frame('POP_DESC_NAME'=c(store$POP_DESC[seq(1,nrow(store),2)]),'XIIdra'=c(store$num[seq(2,nrow(store),2)]),
+                    'Restasis'=c(store$num[seq(1,nrow(store),2)]),'total'=c(store$num[seq(1,nrow(store),2)]+store$num[seq(2,nrow(store),2)]),
+                    'Percentage_XIIdra'=c(store$percentage[seq(2,nrow(store),2)]*100),'Percentage_Restasis'=c(store$percentage[seq(1,nrow(store),2)]*100))
+}
+new <- as.data.frame(filter(restore, restore$total < 150))
+desc <- "others"
+xiidra_sum=0
+restasis_sum=0
+total_sum=0
+percen_xi=0
+percen_re=0
+
+for (i in 1:nrow(new)){
+  xiidra_sum=xiidra_sum+new$XIIdra[i]
+  restasis_sum=restasis_sum+new$Restasis[i]
+  total_sum=xiidra_sum + restasis_sum
+  percen_xi=(xiidra_sum/total_sum)*100
+  percen_re=(restasis_sum/total_sum)*100
+} 
+RESTORE<-add_row(restore, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+RESTORE <- filter(RESTORE, RESTORE$total > 150)
+
+nrow(RESTORE)
+desc <- "TOTAL"
+xiidra_sum=0
+restasis_sum=0
+total_sum=0
+percen_xi=0
+percen_re=0
+
+for (i in 1:nrow(RESTORE)){
+  xiidra_sum=xiidra_sum+RESTORE$XIIdra[i]
+  restasis_sum=restasis_sum+RESTORE$Restasis[i]
+  total_sum=xiidra_sum + restasis_sum
+  percen_xi=(xiidra_sum/total_sum)*100
+  percen_re=(restasis_sum/total_sum)*100
+} 
+RESTORE<-add_row(RESTORE, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+
+```
+
+```{r}
+#2016 Q3
+library(DBI)
+library(RSQLite)
+
+temp<-dbConnect(SQLite(),dbname="Shire.db")
+
+store<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, POP_DESC
+           FROM New_Patient
+where dispensed_date between "2016-07-01" and "2016-09-30" 
+           group by product_name, POP_DESC
+           order by POP_DESC,num')
+store$percentage<-NA
+
+for (i in seq(1,nrow(store),2)) {
+  store$percentage[i]<-store$num[i] /(store$num[i+1]+store$num[i])
+  store$percentage[i+1]<-store$num[i+1] /(store$num[i+1]+store$num[i])
+}
+for (i in seq(1,nrow(store),2)) {
+restore<-data.frame('POP_DESC_NAME'=c(store$POP_DESC[seq(1,nrow(store),2)]),'XIIdra'=c(store$num[seq(1,nrow(store),2)]),
+                    'Restasis'=c(store$num[seq(2,nrow(store),2)]),'total'=c(store$num[seq(1,nrow(store),2)]+store$num[seq(2,nrow(store),2)]),
+                    'Percentage_XIIdra'=c(store$percentage[seq(1,nrow(store),2)]*100),'Percentage_Restasis'=c(store$percentage[seq(2,nrow(store),2)]*100))
+}
+new <- filter(restore, restore$total < 100)
+desc <- "others"
+xiidra_sum=0
+restasis_sum=0
+total_sum=0
+percen_xi=0
+percen_re=0
+
+for (i in 1:nrow(new)){
+  xiidra_sum=xiidra_sum+new$XIIdra[i]
+  restasis_sum=restasis_sum+new$Restasis[i]
+  total_sum=xiidra_sum + restasis_sum
+  percen_xi=(xiidra_sum/total_sum)*100
+  percen_re=(restasis_sum/total_sum)*100
+} 
+RESTORE<-add_row(restore, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+RESTORE <- filter(RESTORE , RESTORE $total > 56)
+
+nrow(RESTORE)
+desc <- "TOTAL"
+xiidra_sum=0
+restasis_sum=0
+total_sum=0
+percen_xi=0
+percen_re=0
+
+for (i in 1:nrow(RESTORE)){
+  xiidra_sum=xiidra_sum+RESTORE$XIIdra[i]
+  restasis_sum=restasis_sum+RESTORE$Restasis[i]
+  total_sum=xiidra_sum + restasis_sum
+  percen_xi=(xiidra_sum/total_sum)*100
+  percen_re=(restasis_sum/total_sum)*100
+} 
+RESTORE<-add_row(RESTORE, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+
+
+
+```
+
+
+```{r}
+# "2016-07-01" and "2018-03-01"
+data<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name,  dispensed_date
+                        FROM New_Patient
+                        where dispensed_date between "2016-07-01" and "2018-03-01" 
+                       GROUP BY dispensed_date
+                    order by dispensed_date')
+
+library(tidyverse)
+library(scales)
+library(datetime)
+library(lubridate)
+library(ggplot2)
+#ggplot(data=data_2016Q3,mapping=aes(x='dispensed_date',y='num'))+geom_point()+ scale_x_date(labels = date_format("%Y-%m-%d"))
+data$dispensed_date <- as.POSIXct(data$dispensed_date) 
+class(data$dispensed_date)
+ggplot(data=data,aes(x=dispensed_date,y=num,color=product_name))+geom_line()+scale_x_datetime(date_breaks = "3 months")
+```
+
+
+```{r}
+
+library(DBI)
+library(RSQLite)
+library(ggplot2)
+temp<-dbConnect(SQLite(),dbname="Shire.db")
+# "2016-09-01" and "2018-03-01"
+data<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name,  dispensed_date
+                        FROM New_Patient
+                        where dispensed_date between "2016-09-01" and "2018-03-01" 
+                       GROUP BY dispensed_date
+                    order by dispensed_date')
+library(zoo)
+data$yearmonth <- as.Date(as.yearmon(data$dispensed_date))
+ggplot(data) + aes(x=yearmonth,y=num,fill=product_name ) +
+  geom_bar(stat = "identity") 
+xiidra <- filter(data, product_name == "XIIDRA")
+xiidra %>% group_by(yearmonth) %>% 
+   summarize(num=sum(num))
+xiidra
+ggplot(xiidra, aes(x=yearmonth,y=num)) + geom_bar(stat = "identity") + 
+  labs(x = "Year-Month", y = "amount") + scale_x_date(labels = date_format("%m-%Y")) + ggtitle("Xiidra: Sells by Month")
+rest <- filter(data, product_name == "RESTASIS")
+rest %>% group_by(yearmonth) %>% 
+   summarize(num=sum(num))
+rest
+ggplot(rest, aes(x=yearmonth,y=num)) + geom_bar(stat = "identity") + ggtitle("Restasis: Sells by Month")
+```
+
+
+```{r}
+data1<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, BOB,dispensed_date
+           FROM New_Patient
+            where dispensed_date between "2016-09-01" and "2018-03-01" 
+           group by product_name,BOB,dispensed_date
+           order by BOB')
+library(zoo)
+data1$yearmonth <- as.Date(as.yearmon(data1$dispensed_date))
+data2<-data1 %>% group_by(BOB,product_name,yearmonth) %>% 
+   summarize(num=sum(num)) %>% arrange(desc(num))
+data_BOB<-data_2 %>% group_by(BOB)  %>% summarize(num=sum(num))  %>% arrange(desc(num))
+data_top2<-data1 %>% filter(BOB=="CVS Health-Commercial")
+
+
+
+data_top20_Restasis<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, BOB 
+           FROM New_Patient 
+          where product_name=="RESTASIS"
+           group by product_name, BOB
+           
+           order by  num desc LIMIT 20')
+data_all<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, BOB
+           FROM New_Patient 
+           group by product_name, BOB
+           order by  num desc')
+#data_remaining<-anti_join(data_all,data_top20)
+```
