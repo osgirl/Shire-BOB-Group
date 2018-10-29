@@ -1,0 +1,119 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+temp<-dbConnect(SQLite(),dbname="Shire.db")
+
+store<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name, POP_DESC
+           FROM New_Patient
+           group by product_name, POP_DESC
+           order by POP_DESC,num')
+store$percentage<-NA
+
+
+
+for (i in seq(1,26,2)) {
+  store$percentage[i]<-store$num[i] /(store$num[i+1]+store$num[i])
+  store$percentage[i+1]<-store$num[i+1] /(store$num[i+1]+store$num[i])
+}
+for (i in seq(1,26,2)) {
+restore<-data.frame('POP_DESC_NAME'=c(store$POP_DESC[seq(1,26,2)]),'XIIdra'=c(store$num[seq(1,26,2)]),
+                    'Restasis'=c(store$num[seq(2,26,2)]),'total'=c(store$num[seq(1,26,2)]+store$num[seq(2,26,2)]),
+                    'Percentage_XIIdra'=c(store$percentage[seq(1,26,2)]*100),'Percentage_Restasis'=c(store$percentage[seq(2,26,2)]*100))
+}
+
+
+```
+
+```{r}
+new <- filter(restore, restore$total < 500)
+View(new)
+nrow(new)
+
+desc <- "others"
+xiidra_sum=0
+restasis_sum=0
+total_sum=0
+percen_xi=0
+percen_re=0
+
+for (i in 1:nrow(new)){
+  xiidra_sum=xiidra_sum+new$XIIdra[i]
+  restasis_sum=restasis_sum+new$Restasis[i]
+  total_sum=xiidra_sum + restasis_sum
+  percen_xi=(xiidra_sum/total_sum)*100
+  percen_re=(restasis_sum/total_sum)*100
+} 
+add_row(restore, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+RESTORE <- filter(restore, restore$total > 300)
+```
+
+```{r}
+nrow(RESTORE)
+desc <- "TOTAL"
+xiidra_sum=0
+restasis_sum=0
+total_sum=0
+percen_xi=0
+percen_re=0
+
+for (i in 1:nrow(RESTORE)){
+  xiidra_sum=xiidra_sum+RESTORE$XIIdra[i]
+  restasis_sum=restasis_sum+RESTORE$Restasis[i]
+  total_sum=xiidra_sum + restasis_sum
+  percen_xi=(xiidra_sum/total_sum)*100
+  percen_re=(restasis_sum/total_sum)*100
+} 
+RESTORE1 <- add_row(RESTORE, POP_DESC_NAME = desc, XIIdra = xiidra_sum, Restasis = restasis_sum, total=total_sum, Percentage_XIIdra=percen_xi, Percentage_Restasis=percen_re)
+RESTORE2 <- arrange(RESTORE1, total)
+RESTORE2
+kable(RESTORE2)
+```
+
+
+
+```{r}
+# "2016-09-01" and "2018-03-01"
+data<-dbGetQuery(temp,'SELECT count(patient_id)as num, product_name,  dispensed_date
+                        FROM New_Patient
+                        where dispensed_date between "2016-09-01" and "2018-03-01" 
+                       GROUP BY dispensed_date
+                    order by dispensed_date')
+library(zoo)
+data$yearmonth <- as.Date(as.yearmon(data$dispensed_date))
+
+ggplot(data) + aes(x=yearmonth,y=num,fill=product_name ) +
+  geom_bar(stat = "identity") 
+
+
+xiidra <- filter(data, product_name == "XIIDRA")
+xiidra %>% group_by(yearmonth) %>% 
+   summarize(num=sum(num))
+xiidra
+ggplot(xiidra, aes(x=yearmonth,y=num)) + geom_bar(stat = "identity") + 
+  labs(x = "Year-Month", y = "amount") + scale_x_date(labels = date_format("%m-%Y")) + ggtitle("Xiidra: Sells by Month")
+
+
+
+rest <- filter(data, product_name == "RESTASIS")
+rest %>% group_by(yearmonth) %>% 
+   summarize(num=sum(num))
+rest
+ggplot(rest, aes(x=yearmonth,y=num)) + geom_bar(stat = "identity") + ggtitle("Restasis: Sells by Month")
+
+
+```
+
+
+
+
+
+
+
